@@ -1,0 +1,330 @@
+#!/usr/bin/env python
+# coding: utf-8
+# Filename: nosecone_maker2.py
+"""
+NoseCone Maker
+
+A script written in Python 3.7 to create a nosecone with shoulder for a 
+given airframe size. The nosecone will have a hollow interior with constant 
+wall thickness of value ``k``. The coordinates of the nosecone will be 
+produced as a 2D matrix and printed to a .csv file for use in OpenSCAD.
+
+
+Requirements:
+-------------
+* Python 3.7.6+
+* Jupyter NoteBook 6.0.2+
+* Shapely 1.6.4+
+* Matplotlib 3.1.1+
+* Numpy 1.17.3+
+
+
+Instructions:
+-------------
+1. Define the parameters
+2. Run the code
+3. Open the file that was just created and copy its contents
+4. Paste those contents into an OpenSCAD file (alternatively change the file 
+   extension from *.csv* to *.scad*)
+5. Run the OpenSCAD file
+6. It should produce a nosecone with the parameters you have defined
+
+
+User Parameters:
+----------------
+d<sub>&gamma;</sub>		Plot resolution, same units as gamma
+ar						Length to width ratio, dimensionless
+&alpha;					Nosecone shape parameter, dimensionless
+&beta;					Aft nosecone diameter, mm. This is the same as the 
+						outer airframe diameter.
+&gamma;					Nosecone length (excluding shoulder length), mm
+k						Wall thickness, mm
+&beta;<sub>s</sub>		Shoulder outer diameter, mm. This is the same as the 
+						inner airframe diameter.
+&gamma;<sub>s</sub>		Shoulder length, mm
+
+
+Default Test Values:
+--------------------
+dgamma = 0.1	# plot resolution, same units as gamma
+ar = 4			# length to width ratio, dimensionless
+alpha = 1		# nosecone shape parameter, dimensionless
+beta = 40		# aft nosecone diameter, mm
+gamma = ar * beta	# nosecone length, mm
+k = 1.5			# wall thickness, mm
+beta_s = 36		# shoulder outer diameter, mm
+gamma_s = 38	# shoulder length, mm
+
+See the ``tests/NoseConeMaker`` folder for the outputs of the test.
+
+
+Notes:
+------
+* The nosecone coordinate axes are defined as such:
+  * X-axis: The longitudinal axis extending down the center of the nosecone
+            in the direction of maximum length; that is to say, from tip of 
+			the nosecone (where X = 0) to the base of the shoulder.
+  * Y-axis: The axis extending perpendicular to the X-axis and parallel 
+            with the plane of the bottom of the shoulder. 
+  * Z-axis: Z-axis and Y-axis are effectively the same.
+* Currently only ``alpha = 1`` is supported. This should produce an ogive 
+  nosecone.
+* Change the value of ar to achieve different types of ogive. For example ``
+  ar = 4`` is a 4:1 ogive.
+* The output file will contain several hundred lines of coordinate points, 
+  depending on the overall length of the nosecone and the value of dgamma. 
+    * A value of ``dgamma = 0.1`` should be sufficient for a nosecone of 40mm 
+	  long (excluding shoulder). 
+* The coordinates produced can be used in other CAD programs. 
+    * The nosecone profile is designed to be created by a revolve-extrude 
+	  operation around the central axis. 
+    * Attempts to test a similar program as this one (transition_maker, which 
+	  makes hollow transition sections) were not successful in Solid Edge, 
+	  but it is likely that it could be made to work. 
+* This code was developed and tested only in Jupyter NoteBook. Attempts might 
+  be made later to transition all the code and related codes to a PyCharm 
+  project. If you attempt this and run into issues please let the developer know!
+    * NOTE: If you are reading this sentance then this code has been 
+	        converted to a normal python module (.py file). 
+* Attempting to export the generated nosecone from OpenSCAD 2019.05 has 
+  caused the program to lock-up for me. You might run into similar issues. 
+  I was using OpenSCAD 2019.05. Try reducing the ``dgamma`` value or 
+  vodka-cooling your PC.
+* This file supersedes nosecone_maker.ipynb
+
+
+TODO:
+-----
+* Add functionality to plot a nosecone that will include a metal tip
+    * Just supply the length of the metal tip and mask the plot data
+* Need to add functionality to make the nose blunted (see bullet plotter 
+  I think?)
+
+
+Created by: Andrew Smelser
+Created on: 02-14-2020
+Updated on: 10-28-2020
+"""
+from shapely.geometry import Point, LineString
+from shapely.ops import polygonize
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+
+# ----- Functions from boolit.py ----- #
+def _blunt_tangent_ogive(R_base=None, L_ogive=None, rn=None, rho=None, 
+                        **kwargs):
+    """Calculate the nose shape for a spherically blunted tangent ogive
+        
+        See also https://en.wikipedia.org/wiki/Nose_cone_design#Tangent_ogive
+        
+        :param R_base: Radius of the base, mm
+        :type R_base: None, float, int
+        :param L_ogive: length of the ogive, mm
+        :type L_ogive: None, float, int
+        :param rn: radius of the nose sphere, mm
+        :type rn: None, float, int
+        :param rho: ogive radius, mm
+        :type rho: None, int, float
+        :return xt: The x-coordinate where the ogive is 
+            tangent to the nose, mm.
+        :rtype xt: int, float
+        :return yt: The y-coordinate where the ogive is 
+            tangent to the nose, mm.
+        :rtype yt: int, float
+        :return x0: x-coord of center of circle which defines 
+            the shape of the nose, mm
+        :rtype x0: int, float
+        :return xa: the apex point of the nose, mm.
+        :rtype xa: int, float
+    """    
+    if rho is None:
+        # rho = (R_base**2 + L_ogive**2)/(2*R_base)
+        raise ValueError('Rho cannot be None')
+    x0 = L_ogive - np.sqrt((rho - rn)**2 - (rho-R_base)**2)
+    yt = rn*(rho-R_base)/(rho-rn)
+    xt = x0 - np.sqrt(rn**2 - yt**2)
+    xa = x0 - rn  # apex point
+    return xt, yt, x0, xa
+
+
+
+# ------------------------------------ #
+
+
+def xy_points(gamma, beta, alpha=1, dgamma=0.1):
+    """Calculate the x and y coordinates of the nosecone
+    
+        :param gamma: Nosecone length, mm.
+        :type gamma: int, float
+        :param dgamma: incremental nosecone length for iteration, mm. 
+			Default is 0.001
+        :type dgamma: float
+        :param beta: Aft nosecone outer diameter, mm.
+        :type beta: int, float
+        :param alpha: Nosecone shape parameter; default is 1
+        :type alpha: int  
+    """
+    curve_pts = np.arange(0, gamma+dgamma, dgamma)
+    x = curve_pts
+    
+    x_sq = x**2  # Same as x_pts.^2 in MATLAB    
+    y = beta*((-alpha*x_sq/gamma**2)+(2*x/gamma))/(2*(2-alpha))
+    return x, y
+
+
+def add_shoulder(x, y, beta_s, gamma_s):
+    """Create the nosecone shoulder
+    
+        :param x: x-coordinates for the nosecone
+        :type x: np.array
+        :param y: y-coordinates for the nosecone
+        :type y: np.array
+        :param beta_s: Nosecone shoulder outer diameter, mm.
+        :type beta_s: int, float
+        :param gamma_s: Nosecone shoulder length, mm.
+        :type gamma_s: int, float   
+    """
+    xy_tups = [(x[i], y[i]) for i, _ in enumerate(x)]
+    sldr_stop_x0_y0 = (x[-1], y[-1])
+    sldr_stop_x1_y1 = (x[-1], beta_s/2)
+    sldr_end_x2_y2 = (x[-1] + gamma_s, beta_s/2)
+    xy_tups.append(sldr_stop_x0_y0)
+    xy_tups.append(sldr_stop_x1_y1)
+    xy_tups.append(sldr_end_x2_y2)
+    ln1 = LineString(xy_tups)
+    return ln1
+
+
+def inner_surface(outer_surface, k):
+    """Create the inner surface line
+    
+        :param outer_surface: Shapely LineString for the outer surface
+        :type outer_surface: shapely.LineString
+        :param k: Wall thickness, mm.
+        :type k: float    
+    """
+    k = float(k)  # force k to be a float
+    if k < 0:
+        side='left'
+    elif k > 0:
+        side='right'
+    else:
+        msg = f'Unknown error encountered when handling k value of {k}.'
+        raise ValueError(msg)
+    
+    return outer_surface.parallel_offset(
+        distance=abs(k),
+        side=side,
+        join_style=2)
+
+
+def plot_coords(line_coords):
+    """Show the plot of the lines
+    
+        Call `transition_offset_wall()` before calling this function
+
+        :param line_coords: Shapely LineString object that 
+			represents the transition
+        :type line_coords: shapely.LineString, list
+    """
+    loc_coords_copy = list()
+    for _coords in line_coords:
+        loc_coords = np.array([(x[0], x[1]) for x in _coords.coords])
+        loc_coords_copy.append(loc_coords)
+
+    # Upper surface 
+    upper_surface = loc_coords_copy[0].T
+    us_x = upper_surface[0]
+    us_y = upper_surface[1]
+    
+    lower_surface = loc_coords_copy[1].T
+    ls_x = lower_surface[0]
+    ls_y = lower_surface[1]
+    
+    # Correct lower surface nosetip
+    msk = ls_y < 0
+    ls_x = np.extract(~msk, ls_x)
+    ls_y = np.extract(~msk, ls_y)
+    
+    xx = np.concatenate([us_x, ls_x])
+    yy = np.concatenate([us_y, ls_y])
+    
+    get_ipython().run_line_magic('matplotlib', 'inline')
+    fig = plt.figure(figsize=(13,6), dpi=150)
+    ax = plt.axes()
+    ax.grid()
+    ax.plot(xx, yy, color='g')
+    ax.set_aspect('equal')
+    plt.show()
+    return np.vstack((xx, yy)).T
+
+
+def write_to_file(coord_pairs, filename):
+    """Write the coordinate pairs to a csv file
+
+        Write coordinate pairs to a .csv file for copy and paste
+        into OpenSCAD
+
+        :param coord_pairs: A NumPy array of x and y coordinates for 
+			the nosecone
+        :type coord_pairs: np.array
+        :param filename: The name of the output file. Must contain 
+			the file extension. 
+        :type filename: str, PathLike    
+    """
+    filename = os.path.join(os.getcwd(), filename)
+    rows, _ = coord_pairs.shape
+    i = 0
+    max_length = max(coord_pairs.T[0])
+    header = f"""rotate_extrude($fn=200)
+\trotate([0,0,-90])
+\t\ttranslate([-{max_length},0,0])
+\t\t\tpolygon(
+\t\t\t\tpoints=[
+"""
+    with open(filename, mode='w', newline='') as fout:
+        fout.write(header)
+        for row in coord_pairs:
+            i = i + 1
+            if i == rows:
+                write_str = f'\t\t\t\t\t[{row[0]},{row[1]}]\n\t\t\t\t]\n\t\t\t);'
+            else:
+                write_str = f'\t\t\t\t\t[{row[0]},{row[1]}],\n'
+            fout.write(write_str)
+    print('File created: {}'.format(filename))
+    return True
+
+
+def main(filename, **kwargs):
+    """Call all functions and produce the output file
+    
+        :param filename: The name of the output file. Must include file 
+			extension.
+        :type filename: str, PathLike
+		:param kwargs: Keyword arguments to pass to all the other 
+			functions. See docstrings for each function for info 
+			on what it requires as input
+		:type kwargs: dict
+    """
+    x, y = xy_points(gamma=kwargs['gamma'], beta=kwargs['beta'])
+    outer = add_shoulder(x, y, kwargs['beta_s'], kwargs['gamma_s'])
+    inner = inner_surface(outer, kwargs['k'])
+    coord_pairs = plot_coords([outer, inner])
+    write_to_file(coord_pairs=coord_pairs, filename=filename)
+    return coord_pairs
+
+
+if __name__ == "__main__":
+	main_kw = {
+		'dgamma': 0.1,
+		'ar': 4,
+		'alpha': 1,
+		'beta': 40,
+		'k': 1.5,
+		'beta_s': 36,
+		'gamma_s': 38
+		}
+	gamma = 4*40  # gamma = ar * beta
+	nc = main(filename='test_nosecone_1.scad', **main_kw)
