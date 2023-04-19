@@ -25,23 +25,15 @@
  * If there's anything I've said above you don't understand, you shouldn't be 
  * creating parts with this program for rockets you intend to fly.
  *
- *
  * All dimensions should be in MILLIMETERS
- *
  *
  * Created by Unknown
  * Created on Unknown
- * 
- * Modified by ASmelser
- * Modified on 12-28-2021
+ * Modified on 04-19-2023 by A. Smelser
  */
-
-// Leave these alone
 $fn = 0;
 $fa = 0.01;
-
-// Render quality setting
-$fs = 0.3;  // * range: 2 (coarse) to 0.3 (fine)
+$fs = 0.3;  // 2 (coarse) to 0.3 (fine)
 
 3d_transition();
 
@@ -62,11 +54,17 @@ module 3d_transition(shld_len=30, shld_dia=28.8, anc_dep=15, anc_dia=9.5, btm_di
 	 *   shld2_dia : Top shoulder diameter. Inner diameter of upper body tube.
 	 */
 	difference(){
-		cylinder (h=shld_len, d=shld_dia);  // create bottom shoulder
-		cylinder (h=anc_dep, d=anc_dia);  // create anchor hole
+		cylinder(h=shld_len, d=shld_dia);  // create bottom shoulder
+		cylinder(h=anc_dep, d=anc_dia);  // create anchor hole
 	}
-	translate ([0, 0, shld_len])
-	cylinder (h=tran_len, d1=btm_dia, d2=top_dia);  // create transition cone
-	translate ([0, 0, shld_len + tran_len])
-	cylinder (h=shld2_len, d=shld2_dia);  // create top shoulder
+	
+	// Create transition cone
+	translate([0, 0, shld_len]) {
+		cylinder(h=tran_len, d1=btm_dia, d2=top_dia);
+	}
+	
+	// Create top shoulder
+	translate([0, 0, shld_len + tran_len]){
+		cylinder(h=shld2_len, d=shld2_dia);
+	}
 }

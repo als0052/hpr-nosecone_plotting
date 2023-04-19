@@ -1,0 +1,10 @@
+﻿"R"= 2'base radius
+"L"= 16.5'overall length
+"phi"= atn ( "R" / "L" )'half angle
+"rn"= .1'blunted nose radius
+"xt"= ( "L" ^ 2 / "R" ) * sqr ( "rn" ^ 2 / ( "R" ^ 2 + "L" ^ 2 ) )'tangency x-coordinate
+"yt"= "xt" * "R" / "L"'tangency y-coordinate
+"xo"= "xt" + sqr ( "rn" ^ 2 - "yt" ^ 2 )'center of spherical nose cap
+"xa"= "xo" - "rn"'apex point
+"D4@Sketch1"="rn"*2
+"D2@Sketch1"="L" - (("L"^2 / "R") * sqr("rn"^2 / ("R"^2 + "L"^2)))

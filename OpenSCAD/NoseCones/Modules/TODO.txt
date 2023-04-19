@@ -1,5 +1,0 @@
-OpenSCAD Rocketry To Do Programs
---------------------------------
-- TODO: Fin generator that accepts input parameters like the open rocket interface
-- TODO: Fix the transition generator to do a hollowed version. Might have code for this already somewhere. Should have MATLAB or Python version at home?
-- TODO: Fix the nosecone generator to do a hollowed version. Might have code for this already. 

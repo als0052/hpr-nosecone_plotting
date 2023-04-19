@@ -25,26 +25,17 @@
  * If there's anything I've said above you don't understand, you shouldn't be 
  * creating parts with this program for rockets you intend to fly.
  *
- *
  * All dimensions should be in MILLIMETERS
- *
  *
  * Created by Unknown
  * Created on Unknown
- * 
- * Modified by ASmelser
- * Modified on 12-28-2021
+ * Modified on 04-19-2023 A. Smelser
  */
-
-// Leave these alone
 $fn = 0;
 $fa = 0.01;
-
-// Render quality setting
-$fs = 0.3;  // * range: 2 (coarse) to 0.3 (fine)
+$fs = 1.0;  // 2 (coarse) to 0.3 (fine)
 
 parabolic_nosecone();
-
 
 module parabolic_nosecone(k=1, shld_len=35, shld_dia=28.8, anc_dep=25, anc_dia=12.5, body_dia=30.8, ar=5, num_faces=400) {
 	/* Parabolic Nose Cone Generator
@@ -64,16 +55,21 @@ module parabolic_nosecone(k=1, shld_len=35, shld_dia=28.8, anc_dep=25, anc_dia=1
 	 *   num_faces: Number of longitudinal faces to calculate. Finer resolution with larger number.
 	 */
 	// Build nosecone shoulder
-	translate ([0, 0, -shld_len])
-	difference(){
-		cylinder (h=shld_len, r=shld_dia/2);  // create shoulder
-		cylinder (h=anc_dep, r=anc_dia/2);  // create anchor hole
+	translate ([0, 0, -shld_len]) {
+		difference(){
+			cylinder (h=shld_len, r=shld_dia/2);  // create shoulder
+			cylinder (h=anc_dep, r=anc_dia/2);  // create anchor hole
+		}
 	}
 
 	// Build nosecone body
 	body_len = body_dia*ar;  // body length
 	body_rad = body_dia/2;  // body base radius
+
 	function y(x) = body_rad*(2*x/body_len - k*pow(x/body_len, 2))/(2 - k);
 	ply_pts = concat([[0, 0]],[for (i=[0:num_faces]) let (x=(i*body_len/num_faces))[y(body_len - x), x]]);
-	rotate_extrude() polygon(points=ply_pts);
+	
+	rotate_extrude(){
+		polygon(points=ply_pts);
+	}
 }

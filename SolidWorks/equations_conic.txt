@@ -1,0 +1,3 @@
+﻿"R"= 2'base radius
+"L"= 16.5'overall length
+"phi"= atn ( "R" / "L" )

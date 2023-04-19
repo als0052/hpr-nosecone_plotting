@@ -1,0 +1,3 @@
+﻿"Kprime"= 1
+"R"= 2'radius of the base
+"L" = 16.5'overall length

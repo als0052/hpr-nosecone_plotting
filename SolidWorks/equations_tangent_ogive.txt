@@ -1,0 +1,4 @@
+﻿"R"= 2'base radius
+"L"= 16.5'overall length
+"rho"= ( "R" ^ 2 + "L" ^ 2 ) / ( 2 * "R" )'ogive radius
+"D1@Sketch1"="R"

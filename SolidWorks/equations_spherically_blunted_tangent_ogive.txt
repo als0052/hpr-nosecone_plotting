@@ -1,0 +1,16 @@
+﻿"R"= 2'base radius
+"L"= 16.5'overall length
+"rho"= ( "R" ^ 2 + "L" ^ 2 ) / ( 2 * "R" )'ogive radius
+"rn"= 0.25'spherical cap radius
+"xo"= "L" - sqr ( ( "rho" - "rn" ) ^ 2 - ( "rho" - "R" ) ^ 2 )'spherical cap center (from origin)
+"yt"= "rn" * ( "rho" - "R" ) / ( "rho" - "rn" )'tangency y-coordinate
+"xt" = "xo" - sqr ( ( "rn" ^ 2 ) - ( "yt" ^ 2 ) )'tangency x-coordinate
+"xa"= "xo" - "rn"'apex location (from origin)
+"D1@Unblunted Reference" = "R"
+"D2@Unblunted Reference" = "rn"
+"D1@Sketch2"="R"
+"D2@Sketch2"="L"
+"D3@Sketch2"="xt"
+"D4@Sketch2"="yt"
+"D5@Sketch2"="rn"
+"D6@Sketch2"="xo"

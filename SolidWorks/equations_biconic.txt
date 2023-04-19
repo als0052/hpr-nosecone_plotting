@@ -1,0 +1,9 @@
+﻿"L1"= 10'length 1
+"L2"= 6.5'length 2
+"L"= "L1" + "L2"'overall length
+"R1"= 1'Radius at length 1
+"R2"= 2'Radius at length 2
+"phi1"= atn ( "R1" / "L1" )'half angle 1
+"phi2"= atn ( ( "R2" - "R1" ) / "L2" )'half angle 2
+"D2@Sketch1"="R2"
+"D1@Sketch1"="R1"

@@ -1,0 +1,87 @@
+%YAML 1.1
+---
+#----------------------------------------------------------------------------#
+# 40mm - L/60 Bofors-style Cannon                                            #
+#                                                                            #
+# https://www.thingiverse.com/thing:4390457                                  #
+#----------------------------------------------------------------------------#
+40x311mmR:
+  Designations: 
+    M81: "U.S. PROJECTILE, 40-MM, AA, AP, AND APT, M81 AND M81A1"
+  AlternateNames: null
+  Drawings: null
+  Specifications: null
+
+#----------------------------------------------------------------------------#
+# 20mm - M61 Vulcan Cannon                                                   #
+#----------------------------------------------------------------------------#
+20x102mm:
+  Designations:
+    M56: "High Explosive Indendiary (HEI)"  # Casing?
+    M53: "Armor Piercing Indendiary (API)"  # Casing?
+    M55: "Target Practice (TP)" # Casing?
+    M940: Projectile    # Projectile?
+    M246: Projectile    # Projectile?
+  AlternateNames: 
+    - 20mm Vulcan
+  Drawings:
+    M55A2:  # Full cartridge?
+      D7258817: "Cartridge, 20mm, Target Practice, M55A2"
+      D7258928: "Marking on Shipping and Storage Container, M548 for 20mm Cartridges"
+      F7258941: "Method of Packing 100 Cartridges, 20mm, with M103 Type Case, in Bulk, In M548 Container"
+      F7258942: "Method of Packing 200 Cartridges, 20mm, with M103 Type Case, in Bulk, in M548 Container"
+      F7258968: "Method of Packing 100 Cartridges, 20mm, in M12 Type Links, in M548 Container"
+      F7258969: "Method of Packing 100 Cartridges, 20mm, in M14 Type Links, in M548 Container"
+      F7258970: "Method of Packing 100 Cartridges, 20mm, in M17 Type Links, in M548 Container"
+      LI 7259626: "Index of Inspection Equipment Lists for: Cartridge, 20mm, Target Practice, M55A2"
+      D7259237: "Marking on Shipping and Storage Containers M548 for Cartridges, 20mm, Linked (Functional)"
+    M103:   # Casing only?
+      D7553815: "Case, Cartridge, 20mm, M103"
+      C7258801: "Classification of Defects for Case, Cartridge, 20mm, M103 and M103B1"
+      D7258817: "Cartridge, 20mm, Target Practice, M55A2"
+      D7258856: "Carton, Interplant Shipment for 20mm, Cartridge Cases, Empty, Unprimed"
+      LI 8656290: "Index of Inspection Equipment Lists for: Case, Cartridge, 20mm, M103"
+  Specifications:
+    M55: MIL-C-46552C   # TP
+    TP-T: MIL-C-60609A  # TP-T
+    M53: MIL-C-46552C   # API
+    M56: MIL-C-46578D   # HEI
+
+#----------------------------------------------------------------------------#
+# .50 BMG - Browning M2 Machine Gun                                          #
+#----------------------------------------------------------------------------#
+".50 BMG":
+  Designations: null
+  AlternateNames: 
+    - 12.7x99mm NATO
+  Drawings: null
+  Specifications: null
+
+#----------------------------------------------------------------------------#
+# .30-06 Springfield - Browning M1919A4 Machine Gun                          #
+#----------------------------------------------------------------------------#
+".30-06": 
+  Designations: null
+  AlternateNAmes:
+    - 7.62x63mm
+  Drawings: null
+  Specifications: null
+
+#----------------------------------------------------------------------------#
+# 30mm - Mk44 Bushmaster II Cannon (GAU-23)                                    #
+#----------------------------------------------------------------------------#
+30x173mm:
+  Designations: 
+    MK238: "High Explosive Incendiary-Tracer (HEI-T)"
+    MK239: "Target Practice Traced (TP-T)"
+    MK258: "Armor Piercing, Fin Stabilized, Discarding Sabot-Tracer (APFSDS-T)"
+    MK264: "Multi Purpose Low Drag-Tracer(MPLD-T)"
+    MK266: "High Explosive Incendiary-Tracer (HEI-T)"
+    MK310: "Programmable Air Burst Munition-Tracer (PABM-T)"
+    MK317: "Target Practice Discarding Sabot-Tracer (TPDS-T)"
+    "PGU14/B": "Armor Piercing Incendiary (API)"
+    "PGU13D/B": "High Explosive Incendiary (HEI)"
+    "PGU15A/B": "Target Practice (TP)"
+  AlternateNames: null
+  Drawings: null
+  Specifications: null

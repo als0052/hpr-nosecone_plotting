@@ -1,15 +1,19 @@
 /* Create a hollowed nosecone
  * 
  * Dimensions unknown... I did not document them properly
+ *
+ * NOTE: This model requires an additional computer program (either MATLAB or 
+ *       Python, I don't remember) to generate the points shown below. I do 
+ *       not know where the program is.
  * 
- * TODO: Create modules to dynamically calculate the different parts of the nosecone
- * TODO: Create a series of pre-defined nosecones
+ * TODO: Create modules to dynamically calculate the different parts of the 
+ *       nosecone.
+ * TODO: Create a series of pre-defined nosecones.
  * 
  * Created by Andrew Smelser
  * Created c. 2019
- * Updated on 08-20-2021
+ * Updated on 04-19-2023
  */
-
 rotate_extrude($fn=200)
 	rotate([0,0,-90])
 		translate([-198.0,0,0])
