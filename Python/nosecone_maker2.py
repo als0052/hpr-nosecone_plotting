@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-# coding: utf-8
-# Filename: nosecone_maker2.py
 
 """
 NoseCone Maker
+
+
+.. note:: This program is not yet working. 
+
 
 A script written in Python 3.7 to create a nosecone with shoulder for a 
 given airframe size. The nosecone will have a hollow interior with constant 
@@ -117,10 +119,10 @@ TODO:
 
 Created by: Andrew Smelser
 Created on: 02-14-2020
-Updated on: 10-20-2022
+Updated on: 11-22-2024
 """
 
-from shapely.geometry import Point, LineString
+from shapely.geometry import Point, LineString, LinearRing
 from shapely.ops import polygonize
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -134,9 +136,13 @@ class Nosecone:
 	             shoulder_length, ar, **kwargs):
 		self.base_radius = base_radius
 		self.tip_radius = tip_radius
-		self.k = k  # Wall thickness
 		self.ar = ar  # Aspect Ratio
 		self.shoulder_radius = shoulder_radius
+		
+		# FIXME: When either k or shoulder_length are 0 the _inner_surface 
+		#        and _outer_surface attributes don't get populated later in 
+		#        the program.
+		self.k = k  # Wall thickness
 		self.shoulder_length = shoulder_length
 		
 		# beta = self.base_radius
@@ -162,42 +168,58 @@ class Nosecone:
 		self._inner_surface = LineString()
 	
 	def __repr__(self):
-		r = (f"Nosecone({self._base_radius}, {self._tip_radius}, "
-		     f"{self._wall_thickness}, {self._shoulder_radius}, "
-			 f"{self._shoulder_length}, {self._ar})")
+		r = (f"Nosecone(base_radius={self.base_radius}, tip_radius="
+		     f"{self.tip_radius}, k={self.k}, shoulder_radius="
+			 f"{self.shoulder_radius}, shoulder_length="
+			 "{self.shoulder_length}, ar={self.ar})")
 		return r
 
+	# @property
+	# def line_coords(self):
+	# 	r = []
+	# 	if self._outer_surface.is_empty:
+	# 		raise ValueError('No outer surface defined')
+	# 	else:
+	# 		r.append(self._outer_surface)
+	# 	
+	# 	if not self._inner_surface.is_empty:
+	# 		r.append(self._inner_surface)
+	# 	return r
+	
 	@property
-	def line_coords(self):
-		return [self._outer_surface, self._inner_surface]
+	def has_inner_surface(self):
+		return not self._inner_surface.is_empty
 
-	# @property
-	# def rho(self):
-	# 	return self._ogive_radius
- 
-	# @property
-	# def rn(self):
-	# 	return self._tip_radius
- 
-	# @property
-	# def beta(self):
-	# 	return self._base_radius
- 
-	# @property
-	# def beta_s(self):
-	# 	return self._shoulder_radius
- 
-	# @property
-	# def gamma(self):
-	# 	return self._ogive_length
- 
-	# @property
-	# def gamma_s(self):
-	# 	return self._shoulder_length
+	@property
+	def has_outer_surface(self):
+		return not self._outer_surface.is_empty
 
-	# @property
-	# def k(self):
-	# 	return float(self._wall_thickness)
+	@property
+	def ls_coords(self):
+		"""Returns the pairs of X and Y coordinates for the LineStrings
+			
+			Not to be confused with self.coord_pairs.
+			
+			If the outer surface exists its X coords and Y coords are 
+			elements 0 and 1 in the returned list. 
+			If the inner surface exists its X coords and Y coords are 
+			elements 2 and 3 in the returned list.
+		"""
+		if self.has_outer_surface:
+			out_xx = [xy[0] for xy in self._outer_surface.coords]
+			out_yy = [xy[1] for xy in self._outer_surface.coords]
+		else:
+			out_xx = None
+			out_yy = None
+		
+		if self.has_inner_surface:
+			in_xx = [xy[0] for xy in self._inner_surface.coords]
+			in_yy = [xy[1] for xy in self._inner_surface.coords]
+		else:
+			in_xx = None
+			in_yy = None
+		pairs = [out_xx, out_yy, in_xx, in_yy]
+		return pairs
 
 	def _blunt_tangent_ogive(self):
 		"""Calculate the values of x0, xt, yt, and xa"""
@@ -239,9 +261,9 @@ class Nosecone:
 			_x = np.array([xy_out2[0][0], xy_out2[0][0]])
 			_y = np.array([xy_out2[1][0], 0])
 			self._xy = np.concatenate((xy, np.vstack((_x, _y))), axis=1)
-		
-		# TODO: What is the above if-statement doesn't get evaluated? What 
-		#       does that mean or what happens?
+		else:
+			raise ValueError(f'Unexpected logic condition occurred: gamma='
+			                 f'{gamma}, beta={beta}')
 		return None
 
 	def tangent_ogive(self):
@@ -278,66 +300,114 @@ class Nosecone:
 		sldr_end_x2_y2 = np.array([[self._xy[-1, 0] + gamma_s, beta_s]])
 		xy = np.concatenate((self._xy, sldr_stop_x0_y0, sldr_stop_x1_y1,
 		                     sldr_end_x2_y2), axis=0)
-		self._outer_surface = LineString(xy)
+		
+		if self.k == 0:
+			end_xy = np.array([[xy[-1,0], 0]])
+		else:
+			end_xy = np.array([[xy[-1,0], xy[-1,1]-self.k]])
+		
+		# This adds the vertical line to close off the bottom of the 
+		# shoulder. Need to do it somewhere else because of the use of 
+		# offset_curve for the inner surface.
+		# xy = np.concatenate((xy, end_xy), axis=0)
+		
+		if self.k == 0:
+			# No inner surface, we can go ahead and close the linestring
+			self._outer_surface = LinearRing(xy)
+		else:
+			self._outer_surface = LineString(xy)
+		
 		self._xy = xy
 		return None
 		
 	def inner_surface(self):
 		"""Create the interior surface of the nose cone"""
-		side = ''
-		if self.k < 0:
-			side = 'left'
-		elif self.k > 0:
-			side = 'right'
-		# else:
-		# 	return self
-
-		# TODO: parallel_offset might sometimes return a multilinestring
-		#       instead of linestring. example: a slightly curved linestring
-		#       see https://shapely.readthedocs.io/en/stable/manual.html?highlight=linestring#object.parallel_offset
-		self._inner_surface = self._outer_surface.parallel_offset(
-			distance=abs(self.k), side=side, join_style=2)
+		if self.k == 0:
+			return None
+		self._inner_surface = self._outer_surface.offset_curve(
+			distance=self.k, quad_segs=16, join_style=2)
 		return None
 	
 	def correct_ends(self):
 		loc_coords_copy = []
-		for _coords in self.line_coords:
+		
+		r = []
+		if self.has_outer_surface:
+			r.append(self._outer_surface)
+		if self.has_inner_surface:
+			r.append(self._inner_surface)
+		
+		for _coords in r:
 			loc_coords = np.array([(x[0], x[1]) for x in _coords.coords])
 			loc_coords_copy.append(loc_coords)
 
 		upper_surface = loc_coords_copy[0].T
+		if len(upper_surface) == 0:
+			raise ValueError('Surface array is empty')
+		
 		us_x = upper_surface[0]
 		us_y = upper_surface[1]
 		
-		lower_surface = loc_coords_copy[1].T
-		ls_x = lower_surface[0]
-		ls_y = lower_surface[1]
+		if self.has_inner_surface:
+			lower_surface = loc_coords_copy[1].T
+			ls_x = lower_surface[0]
+			ls_y = lower_surface[1]
+			
+			# Correct lower surface nosetip if it passes the X=0 axis
+			msk = ls_y < 0
+			ls_x = np.extract(~msk, ls_x)
+			ls_y = np.extract(~msk, ls_y)
 		
-		# Correct lower surface nosetip
-		msk = ls_y < 0
-		ls_x = np.extract(~msk, ls_x)
-		ls_y = np.extract(~msk, ls_y)
-
-		# FIXME: Looks like the very last point at the nose tip of the inner 
-		#        surface needs another point to level it with the top suface. 
-		#        Then need to close the lines.
+		# FIXME: There's nothing wrong with the values in the two line 
+		#        strings. But, when plotted the upper surface finishes its 
+		#        X-axis run and then immediately returns to near-zero for the 
+		#        X-value when plotting the first pair of the inner surface. 
+		#        To plot them we must append the reverse iteration of the 
+		#        inner surface to the outer surface's coordinate pairs. See 
+		#        current implementation of plot_linestrings() below.
+		
+		us_end = np.array(us_x[-1], us_y[-1])
+		ls_end = np.array(ls_x[-1], ls_y[-1])
 		
 		xx = np.concatenate([us_x, ls_x])
 		yy = np.concatenate([us_y, ls_y])
+		
 		self.coord_pairs = np.vstack((xx, yy)).T
+		breakpoint()
 		return None
 	
-	def plot_coords(self, fn=None):
+	def plot_linestrings(self):
+		ls_outer = self._outer_surface
+		xx_outer = [xy[0] for xy in ls_outer.coords]
+		yy_outer = [xy[1] for xy in ls_outer.coords]
+
+		ls_inner = self._inner_surface
+		xx_inner = [xy[0] for xy in ls_inner.coords]
+		xx_inner.reverse()
+		yy_inner = [xy[1] for xy in ls_inner.coords]
+		yy_inner.reverse()
+		
+		first_pair = [xx_outer[0], yy_outer[0]]
+		
+		xx = xx_outer + xx_inner + [first_pair[0]]
+		yy = yy_outer + yy_inner + [first_pair[1]]
+		self.plot_coords(xx=xx, yy=yy)
+		return None
+	
+	def plot_coords(self, xx=None, yy=None, fn=None):
 		"""Plot the nosecone cross section
 		
+			:param xx: The x-coords to plot.
+			:type xx: np.array, None
+			:param yy: The y-coords to plot.
+			:type yy: np.array, None
 			:param fn: The filename to save the plot to.
 			:type fn: None, Pathlike, str
 		"""
-		if fn is None:
-			fn = Path().home().joinpath('Downloads/nosecone_plot.png')
-		
-		xx = self.coord_pairs[:, 0]
-		yy = self.coord_pairs[:, 1]
+		if xx is None:
+			xx = self.coord_pairs[:, 0]
+		if yy is None:
+			yy = self.coord_pairs[:, 1]
 		
 		fig = plt.figure(figsize=(13,6), dpi=150)
 		ax = fig.add_subplot(111)
@@ -345,10 +415,12 @@ class Nosecone:
 		ax.plot(xx, yy, color='g')
 		ax.set_aspect('equal')
 		plt.show()
-		plt.savefig(fn)
+		
+		if fn is not None:
+			plt.savefig(fn)
 		return fig
 
-	def build_nosecone(self, write=False, fn=None):
+	def build_nosecone(self, write=False, fn='output_coordinates_file.txt'):
 		"""Create the spherically blunted nosecone
 		
 			:param write: A flag to enable or disable writing the data to a 
@@ -360,12 +432,14 @@ class Nosecone:
 		self.tangent_ogive()
 		if self.shoulder_length > 0:
 			self.add_shoulder()
-		if self.k > 0:
+		
+		if self.k != 0:
 			self.inner_surface()
+		
 		self.correct_ends()
+		breakpoint()
 		
 		if write and fn is None:
-			fn = 'output_coordinates_file.txt'
 			self.write_to_file(fn=fn)
 		return None
 
@@ -431,8 +505,8 @@ class Nosecone:
 
 
 if __name__ == "__main__":
-	nc = Nosecone(base_radius=33, tip_radius=10, k=0, shoulder_radius=33,
-	              shoulder_length=0, ar=4, **{'res': 50})
+	nc = Nosecone(base_radius=33, tip_radius=10, k=3, shoulder_radius=23,
+	              shoulder_length=50, ar=4, **{'res': 50})
 	nc.build_nosecone()
 	nc.to_csv(fn=Path().home().joinpath("Downloads/nosecone.txt"))
 	nc.plot_coords()
