@@ -25,17 +25,76 @@
  * If there's anything I've said above you don't understand, you shouldn't be 
  * creating parts with this program for rockets you intend to fly.
  *
- * All dimensions should be in MILLIMETERS
+ * All dimensions should be in MILLIMETERS unless otherwise noted.
  *
  * Created by Unknown
  * Created on Unknown
- * Modified on 04-19-2023 A. Smelser
+ * Modified on 04-21-2025 A. Smelser
  */
 $fn = 0;
 $fa = 0.01;
 $fs = 1.0;  // 2 (coarse) to 0.3 (fine)
 
 parabolic_nosecone();
+
+// The following is experimental and a work in progress. 04-21-2025
+//parabolic_nc2(base_dia=4, L=16.5, r_n=0.25, dL=0.01);
+
+
+module parabolic_nc2(base_dia=4, L=16.5, r_n=0.25, dL=0.01) {
+	/* Spherically blunted tangent ogive
+	 *
+	 * //////////////////////////////////////////////////
+	 * //          THIS CODE IS EXPERIMENTAL           //
+	 * //////////////////////////////////////////////////
+	 * 
+	 * Inputs:
+	 *   base_dia: The diameter of the base of the nosecone. Default is 4 inch.
+	 *   L: Overall nosecone length. Default is 16.5 inch.
+	 *   r_n: Tip radius. Default is 0.25 inch.
+	 *   dL: Step size for calculating nosecone curvature. Default is 0.01 inch.
+	 * 
+	 * NOTE: All inputs to this module are in INCHES.
+	 */
+	// Curvature of the tangent ogive
+	function y(x) = sqrt(rho^2 - (L - x)^2) + R - rho;
+	
+	// Basic tangent ogive variables
+	R = base_dia/2;  // Base radius, inches
+	rho = (R^2 + L^2)/(2*R);
+
+	// Blunted tip variables
+	x_0 = L - sqrt((rho - r_n)^2 - (rho - R)^2);  // Spherical cap center (from origin)
+	y_t = (r_n * (rho - R))/(rho - r_n);  // Y-tangency coordinate
+	x_t = x_0 - sqrt(r_n^2 - y_t^2);  // X-tangency coordinate
+	x_a = x_0 - r_n;  // Apex location (from origin)
+	
+	//
+	// Info about the blunted tip	
+	//
+	echo();
+	echo("------------------------------------------------------------");
+	echo(str("    Spherical Cap Center Point: ", x_0));
+	echo(str("    Tangency Point                 : (", x_t, ", ", y_t, ")"));
+	echo(str("    Apex Location                   : ", x_a));
+	echo("------------------------------------------------------------");
+	echo();
+	
+	x_range = [for (i = [0:dL:L]) i];
+	n_pts = len(x_range);
+	
+	xy_pts = [[0,0],];  // List of XY coord. pairs	
+	for (i = [0:n_pts-1]) {
+		xx = x_range[i];
+		yy = y(xx);
+		xy_pts = concat(xy_pts, [[xx, yy]]);
+		// FIXME: The above line is not concatenating the xx, yy point pairs to the xy_pts array. 
+		//echo(str("(X, Y) = (", xx, ", ", yy, ")"));
+	}
+	//polygon(points=xy_pts);
+	echo(xy_pts);
+}
+
 
 module parabolic_nosecone(k=1, shld_len=35, shld_dia=28.8, anc_dep=25, anc_dia=12.5, body_dia=30.8, ar=5, num_faces=400) {
 	/* Parabolic Nose Cone Generator

@@ -66,43 +66,33 @@ Notes:
   * X-axis: The longitudinal axis extending down the center of the nosecone
             in the direction of maximum length; that is to say, from tip of 
 			the nosecone (where X = 0) to the base of the shoulder.
-
   * Y-axis: The axis extending perpendicular to the X-axis and parallel 
             with the plane of the bottom of the shoulder. 
-
   * Z-axis: Z-axis and Y-axis are effectively the same.
-
 * Currently only ``alpha = 1`` is supported. This should produce an ogive 
   nosecone.
-
 * Change the value of ``ar`` to achieve different types of ogive. For example 
   ``ar = 4`` is a 4:1 ogive.
-
 * The output file will contain several hundred lines of coordinate points, 
   depending on the overall length of the nosecone and the value of 
   ``dgamma``. 
     * A value of ``dgamma = 0.1`` should be sufficient for a nosecone of 40mm 
 	  long (excluding shoulder). 
-
 * The coordinates produced can be used in other CAD programs. 
     * The nosecone profile is designed to be created by a revolve-extrude 
 	  operation around the central axis. 
-
     * Attempts to test a similar program as this one (transition_maker, which 
 	  makes hollow transition sections) were not successful in Solid Edge, 
 	  but it is likely that it could be made to work. 
-
 * This code was developed and tested only in Jupyter NoteBook. Attempts might 
   be made later to transition all the code and related codes to a PyCharm 
   project. If you attempt this and run into issues please let the developer know!
     * NOTE: If you are reading this sentance then this code has been 
 	        converted to a normal python module (.py file). 
-
 * Attempting to export the generated nosecone from OpenSCAD 2019.05 has 
   caused the program to lock-up for me. You might run into similar issues. 
   I was using OpenSCAD 2019.05. Try reducing the ``dgamma`` value or 
   vodka-cooling your PC.
-
 * This file supersedes nosecone_maker.ipynb
 
 
@@ -110,16 +100,14 @@ TODO:
 -----
 .. todo:: Add functionality to plot a nosecone that will include a metal tip. 
           Just supply the length of the metal tip and mask the plot data?
-
 .. todo:: Need to add functionality to make the nose blunted (see bullet plotter 
           I think?)
-
 .. todo:: Add plotting functionality with Matplotlib to view the nosecone 
           before exporting to openSCAD.
 
 Created by: Andrew Smelser
 Created on: 02-14-2020
-Updated on: 11-22-2024
+Updated on: 04-21-2025
 """
 
 from shapely.geometry import Point, LineString, LinearRing
@@ -132,6 +120,27 @@ import os
 
 
 class Nosecone:
+	"""Nosecone plotter object
+	
+		This object will generate the nosecone with a shoulder and wall 
+		thickness. 
+		
+		Unless otherwise noted all measurements are given in millimeters.
+		
+		:param base_radius: The radius of the nosecone base (not the 
+			shoulder).
+		:type base_radius: float, int
+		:param tip_radius: The radius of the spherically blunted tip.
+		:type tip_radius: int, float
+		:param k: Wall thickness
+		:type k: int, float
+		:param shoulder_radius: The outer radius of the shoulder coupler
+		:type shoulder_radius: int, float
+		:param shoulder_length: The exposed length of the shoulder coupler. 
+		:type shoulder_length: int, float
+		:param ar: The aspect ratio of the nosecone. 
+		:type ar: int, float
+	"""
 	def __init__(self, base_radius, tip_radius, k, shoulder_radius,
 	             shoulder_length, ar, **kwargs):
 		self.base_radius = base_radius
@@ -159,10 +168,10 @@ class Nosecone:
 		self.res = kwargs.get('res', 1000)
 		self.alpha = kwargs.get('alpha', 1)
 		
-		self._xa = 0  # apex point
-		self._xt = 0  # x-coord of tangency
-		self._yt = 0  # y-coord of tangency
-		self._x0 = 0  # don't remember what this is
+		self._xa = 0  # Apex point
+		self._xt = 0  # X-coord of tangency
+		self._yt = 0  # Y-coord of tangency
+		self._x0 = 0  # Spherical cap center (from origin)
 		
 		self._outer_surface = LineString()
 		self._inner_surface = LineString()
@@ -198,7 +207,7 @@ class Nosecone:
 	def ls_coords(self):
 		"""Returns the pairs of X and Y coordinates for the LineStrings
 			
-			Not to be confused with self.coord_pairs.
+			Not to be confused with `self.coord_pairs`.
 			
 			If the outer surface exists its X coords and Y coords are 
 			elements 0 and 1 in the returned list. 
@@ -237,6 +246,7 @@ class Nosecone:
 		return None
 	
 	def _nose_arc(self):
+		"""Generate the spherical nose cap arc"""
 		theta0 = 0  # radians
 		theta_t = (np.arctan(self._yt / (self._x0 - self._xt)))  # radians
 		theta = np.linspace(theta0, theta_t, self.res)  # radians
@@ -373,10 +383,11 @@ class Nosecone:
 		yy = np.concatenate([us_y, ls_y])
 		
 		self.coord_pairs = np.vstack((xx, yy)).T
-		breakpoint()
+		# breakpoint()
 		return None
 	
 	def plot_linestrings(self):
+		"""Plot the LineString objects to a figure"""
 		ls_outer = self._outer_surface
 		xx_outer = [xy[0] for xy in ls_outer.coords]
 		yy_outer = [xy[1] for xy in ls_outer.coords]
@@ -420,36 +431,39 @@ class Nosecone:
 			plt.savefig(fn)
 		return fig
 
-	def build_nosecone(self, write=False, fn='output_coordinates_file.txt'):
+	def build_nosecone(self, fn=None):
 		"""Create the spherically blunted nosecone
 		
 			:param write: A flag to enable or disable writing the data to a 
 				file. Default is False.
 			:type write: bool
-			:param fn: The file to write the data to.
+			:param fn: The name of the file to write the data to. Note this 
+				should not be the full file path. Files are saved to the 
+				User's Downloads directory.
 			:type fn: Pathlike, str, None
-		"""
+		"""	
 		self.tangent_ogive()
 		if self.shoulder_length > 0:
 			self.add_shoulder()
-		
 		if self.k != 0:
 			self.inner_surface()
-		
 		self.correct_ends()
-		breakpoint()
+		# breakpoint()
 		
-		if write and fn is None:
+		# if fn is None:
+		# 	fn = 'output_coordinates_file.txt'
+		if fn is not:
+			fn = Path().home().joinpath(f'Downloads/{fn}')
 			self.write_to_file(fn=fn)
 		return None
 
 	def write_to_file(self, fn):
-		"""Write the nosecone data to a file
+		"""Write the nosecone data to a file for OpenSCAD
 		
 			:param fn: The file to write the data to.
 			:type fn: Pathlike, str, None
 		"""
-		filename = os.path.join(os.getcwd(), fn)
+		filename = Path().home().joinpath(f'Downloads/{fn}')
 		rows, _ = self.coord_pairs.shape
 		i = 0
 		max_length = max(self.coord_pairs.T[0])
@@ -469,7 +483,7 @@ class Nosecone:
 				else:
 					write_str = f'\t\t\t\t\t[{row[0]},{row[1]}],\n'
 				fout.write(write_str)
-		print('File created: {}'.format(filename))
+		print(f'File created: "{filename}"')
 		return None
 	
 	def to_csv(self, fn=None, base_plane='xy'):
@@ -482,7 +496,8 @@ class Nosecone:
 			:type base_plane: str
 		"""
 		if fn is None:
-			fn = Path().cwd().joinpath('nosecone.txt')
+			fn = 'nosecone.txt'
+		fn = Path().home().joinpath(f'Downloads/{fn}')
 		
 		n_rows = self.coord_pairs.shape[0]
 		z_col = np.zeros(self.coord_pairs.shape[0]).reshape(n_rows, 1)
