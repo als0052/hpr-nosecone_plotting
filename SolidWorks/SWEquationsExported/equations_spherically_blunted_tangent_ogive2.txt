@@ -1,3 +1,13 @@
+Spherically Blunted Tangent Ogive Nosecone Shape
+------------------------------------------------
+
+Created by A. Smelser
+Created on 05-05-2025
+Updated on 12-04-2025
+
+
+--- INPUT DATA ---------------------------------------------------------------
+
 "R"= 2                                           'base radius
 "L"= 16.5                                        'overall length
 "rho"= ("R"^2 + "L"^2)/(2*"R")                   'ogive radius
@@ -18,11 +28,8 @@
 "D6@Sketch2"="xo"
 
 
-Curve Equation
---------------
-y = sqr("rho"^2 - (("L"-"xt")-x)^2) + "R" - "rho"
+--- PARAMETRIC CURVE EQUATION ------------------------------------------------
 
+y = sqr("rho"^2 - (("L"-"xt")-x)^2) + "R" - "rho"
 x1 = 0
 x2 = "L" - "xt"
-
-
